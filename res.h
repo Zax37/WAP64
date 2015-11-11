@@ -2,21 +2,40 @@
 #include <iostream>
 #include <SFML/Graphics.hpp>
 
-#define TILE_W 64
+#include <dirent.h>
 
-class wwd_map{
+class wwd_map_plane;
+
+class wwd_map {
+friend class wwd_map_plane;
 protected:
     unsigned short base_level = 0;
     wap_wwd* wwd;
-    std::map<unsigned short, unsigned short> action;
-    sf::Texture action_tex; bool any_loaded = false;
+    std::vector<wwd_map_plane> planes;
+    wwd_map_plane* main_plane;
 public:
     unsigned int spawn_x=0, spawn_y=0;
     wwd_map(std::string filename);
     ~wwd_map();
     const char* getLevelName();
-    wap_plane* getMainPlane();
-    void setTileImage(sf::RectangleShape &tile, unsigned short id);
-    sf::Texture* _getT(){ return &action_tex; }
-    uint32_t getTile(wap_plane* plane, uint32_t x, uint32_t y);
+    wwd_map_plane* getMainPlane();
+    void draw( sf::RenderTarget& target, sf::IntRect rect );
+};
+
+class wwd_map_plane {
+friend class wwd_map;
+protected:
+    sf::RectangleShape tile;
+    wap_plane * plane;
+    wwd_map * wwd_map_ptr;
+
+    std::map<unsigned short, unsigned short> imageset;
+    sf::Texture texture; bool any_loaded = false;
+    void setTileImage(unsigned short id);
+    uint32_t getTile(uint32_t x, uint32_t y);
+    void loadTileset(const char* imageset);
+public:
+    unsigned short TILE_W, TILE_H;
+    wwd_map_plane(wwd_map * wp, wap_plane* p);
+    void draw(sf::RenderTarget& target, sf::IntRect rect );
 };

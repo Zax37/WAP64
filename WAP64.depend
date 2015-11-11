@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1447101660 source:d:\projects\wap64\main.cpp
+1447274883 source:d:\projects\wap64\main.cpp
 	"res.h"
 
 1447061882 d:\projects\dist\libwap32\include\wap32.h
@@ -409,12 +409,27 @@
 	<string>
 	<vector>
 
-1447101703 d:\projects\wap64\res.h
+1447273774 d:\projects\wap64\res.h
 	<wap32.h>
 	<iostream>
 	<SFML/Graphics.hpp>
+	<dirent.h>
 
-1447100636 source:d:\projects\wap64\res.cpp
+1447276263 source:d:\projects\wap64\res.cpp
 	"res.h"
 	<assert.h>
+	<string.h>
+
+1396883900 d:\projects\dist\dirent.h
+	<stdio.h>
+	<stdarg.h>
+	<windef.h>
+	<winbase.h>
+	<wchar.h>
+	<string.h>
+	<stdlib.h>
+	<malloc.h>
+	<sys/types.h>
+	<sys/stat.h>
+	<errno.h>
 

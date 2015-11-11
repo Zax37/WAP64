@@ -19,19 +19,15 @@ int main(int argc, const char **argv)
         text.setStyle(sf::Text::Bold);
         text.setPosition(sf::Vector2f(level.spawn_x, level.spawn_y));
 
-        sf::RenderWindow window(sf::VideoMode(640, 480), level.getLevelName());
+        sf::RenderWindow window(sf::VideoMode(800, 600), level.getLevelName());
         window.setVerticalSyncEnabled(true);
         window.setFramerateLimit(60);
-        sf::View view(sf::FloatRect(0, 0, 640, 480));
+        sf::View view(sf::FloatRect(0, 0, 800, 600));
 
         view.setCenter(sf::Vector2f(level.spawn_x, level.spawn_y));
         window.setView(view);
 
-        sf::RectangleShape klocek(sf::Vector2f(64, 64));
-        klocek.setTexture(level._getT());
-
         auto main_plane = level.getMainPlane();
-        cout << wap_plane_get_image_set(main_plane, 0) << endl;
 
         while (window.isOpen())
         {
@@ -52,28 +48,22 @@ int main(int argc, const char **argv)
             }
 
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
-                view.move(-TILE_W,0);
+                view.move(-8,0);
             else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
-                view.move(TILE_W,0);
+                view.move(8,0);
 
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
-                view.move(0,-TILE_W);
+                view.move(0,-8);
             else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
-                view.move(0,TILE_W);
+                view.move(0,8);
 
             window.setView(view);
 
             window.clear();
 
-            for(int y=max((view.getCenter().y-window.getSize().y/2)/TILE_W, 0.f); y<=(view.getCenter().y+window.getSize().y/2)/TILE_W; y++ )
-                for(int x=max((view.getCenter().x-window.getSize().x/2)/TILE_W, 0.f); x<=(view.getCenter().x+window.getSize().x/2)/TILE_W; x++ )
-                if(auto tile_id = level.getTile(main_plane, x, y))
-                {
-                    if(tile_id>1000) continue;
-                    klocek.setPosition(x*TILE_W, y*TILE_W);
-                    level.setTileImage(klocek, tile_id);
-                    window.draw(klocek);
-                }
+            sf::Vector2f c = view.getCenter();
+            sf::Vector2u s = window.getSize();
+            level.draw( window, sf::IntRect( c.x-s.x/2, c.y-s.y/2, s.x, s.y ) );
             window.draw(text);
             window.display();
         }
