@@ -11,7 +11,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="RETAIL01.wwd" />
+				<Option parameters="RETAIL01.WWD" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -33,10 +33,9 @@
 				<Option compiler="gcc" />
 				<Option parameters="RETAIL14.WWD" />
 				<Compiler>
-					<Add option="-O2" />
+					<Add option="-g" />
 				</Compiler>
 				<Linker>
-					<Add option="-s" />
 					<Add option="-lsfml-graphics-s" />
 					<Add option="-lsfml-window-s" />
 					<Add option="-lsfml-system-s" />

@@ -19,10 +19,10 @@ int main(int argc, const char **argv)
         text.setStyle(sf::Text::Bold);
         text.setPosition(sf::Vector2f(level.spawn_x, level.spawn_y));
 
-        sf::RenderWindow window(sf::VideoMode(800, 600), level.getLevelName());
+        sf::RenderWindow window(sf::VideoMode(640, 480), level.getLevelName());
         window.setVerticalSyncEnabled(true);
         window.setFramerateLimit(60);
-        sf::View view(sf::FloatRect(0, 0, 800, 600));
+        sf::View view(sf::FloatRect(0, 0, 640, 480));
 
         view.setCenter(sf::Vector2f(level.spawn_x, level.spawn_y));
         window.setView(view);
@@ -47,15 +47,17 @@ int main(int argc, const char **argv)
 
             }
 
+
+            #define step 9
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
-                view.move(-8,0);
+                view.move(-step,0);
             else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
-                view.move(8,0);
+                view.move(step,0);
 
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
-                view.move(0,-8);
+                view.move(0,-step);
             else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
-                view.move(0,8);
+                view.move(0,step);
 
             window.setView(view);
 

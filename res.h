@@ -18,6 +18,7 @@ public:
     wwd_map(std::string filename);
     ~wwd_map();
     const char* getLevelName();
+    const char* getLevelDir();
     wwd_map_plane* getMainPlane();
     void draw( sf::RenderTarget& target, sf::IntRect rect );
 };
@@ -28,12 +29,14 @@ protected:
     sf::RectangleShape tile;
     wap_plane * plane;
     wwd_map * wwd_map_ptr;
+    sf::Color palette[256];
 
     std::map<unsigned short, unsigned short> imageset;
     sf::Texture texture; bool any_loaded = false;
     void setTileImage(unsigned short id);
     uint32_t getTile(uint32_t x, uint32_t y);
     void loadTileset(const char* imageset);
+    void loadPalette();
 public:
     unsigned short TILE_W, TILE_H;
     wwd_map_plane(wwd_map * wp, wap_plane* p);

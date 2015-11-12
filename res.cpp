@@ -1,6 +1,7 @@
 #include "res.h"
 #include <assert.h>
 #include <string.h>
+#include <fstream>
 
 using namespace std;
 
@@ -55,10 +56,16 @@ wwd_map_plane* wwd_map::getMainPlane(){
     return main_plane;
 }
 
-void wwd_map_plane::loadTileset(const char* tileset)
+const char* wwd_map::getLevelDir()
 {
     string path = "DATA\\LEVEL";
-    path += to_string(wwd_map_ptr->base_level);
+    path += to_string(base_level);
+    return path.c_str();
+}
+
+void wwd_map_plane::loadTileset(const char* tileset)
+{
+    string path = wwd_map_ptr->getLevelDir();
     path += "\\TILES\\";
     path += tileset;
     path += '\\';
@@ -129,15 +136,33 @@ uint32_t wwd_map_plane::getTile(uint32_t x, uint32_t y)
     return wap_plane_get_tile(plane, x, y);
 }
 
+void wwd_map_plane::loadPalette()
+{
+    string path = wwd_map_ptr->getLevelDir();
+    path += "\\PALETTES\\MAIN.PAL";
+    ifstream pal;
+    pal.open(path.c_str(),ios::binary|ios::in);
+    char c[3];
+    for(int i=0; i<256; i++)
+    {
+        pal.read(c, 3);
+        palette[i] = sf::Color(c[0], c[1], c[2], 255);
+    }
+}
+
 wwd_map_plane::wwd_map_plane(wwd_map * wp, wap_plane* p)
 {
     wwd_map_ptr = wp;
     plane = p;
+    loadPalette();
     TILE_W = wap_plane_get_properties(plane)->tile_width;
     TILE_H = wap_plane_get_properties(plane)->tile_height;
     tile.setSize(sf::Vector2f(TILE_W, TILE_H));
-    texture.create(TILE_W, TILE_H);
+    sf::Image img;
+    img.create(TILE_W, TILE_H, palette[wap_plane_get_properties(plane)->fill_color]);
+    texture.loadFromImage(img);
     loadTileset(wap_plane_get_image_set(plane, 0));
+    cout << wap_plane_get_image_set(plane, 0) << " " << wap_plane_get_properties(plane)->movement_x_percent << "x" << wap_plane_get_properties(plane)->movement_y_percent << endl;
 }
 
 void wwd_map::draw(sf::RenderTarget& target, sf::IntRect rect)
@@ -151,34 +176,63 @@ void wwd_map_plane::draw(sf::RenderTarget& target, sf::IntRect rect )
     int32_t m_x = wap_plane_get_properties(plane)->movement_x_percent;
     int32_t m_y = wap_plane_get_properties(plane)->movement_y_percent;
 
-    rect.left = (rect.left * m_x) / 100;
-    rect.top = (rect.top * m_y) / 100;
+    //if(m_x==150) m_x = 50;
+    //if(m_y==125) m_y = 125;
+
+    float percent_x = m_x * 0.01;
+    float percent_y = m_y * 0.01;
+
+    rect.left *= percent_x;
+    rect.top *= percent_y;
 
     tile.setTexture(&texture);
 
     int x0 = rect.left/TILE_W;
     int y0 = rect.top/TILE_H;
-    int xmax = (rect.left+rect.width)/TILE_W+1;
-    int ymax = (rect.top+rect.height)/TILE_H+1;
+    int xmax = (rect.left+rect.width)/TILE_W+1/percent_x;
+    int ymax = (rect.top+rect.height)/TILE_H+1/percent_y;
 
     int px=0, py=0;
 
     if(m_x<100)
-        px = rect.left%TILE_W;
+    {
+        if(m_x==75)
+            px = (rect.left%TILE_W)/3;
+        else
+            px = rect.left%TILE_W;
+    }
     else if(m_x>100)
-        px = -(rect.left%TILE_W)/4;
+    {
+        if(m_x==150)
+            px = -(rect.left%TILE_W)/3;
+        else
+            px = -(rect.left%TILE_W)*percent_x;
+    }
     if(m_y<100)
-        py = rect.top%TILE_H;
+    {
+        if(m_y==75)
+            py = rect.top%TILE_H/3;
+        else
+            py = rect.top%TILE_H;
+    }
     else if(m_y>100)
-        py = -(rect.top%TILE_H)/4;
+    {
+        if(m_y==125)
+            py = -(rect.top%TILE_H)/5;
+        else
+            py = -(rect.top%TILE_H)/3;
+    }
+
 
     for(int y=y0; y<=ymax; y++ )
         for(int x=x0; x<=xmax; x++ )
             if(auto tile_id = getTile(x, y))
             {
-                if(tile_id>1000) continue;
-                tile.setPosition((x0*TILE_W*100)/m_x+(x-x0)*TILE_W+px, (y0*TILE_H*100)/m_y+(y-y0)*TILE_H+py);
-                setTileImage(tile_id);
+                if(tile_id == 4294967295) continue;
+                if(tile_id == 4008636142)
+                    tile.setTextureRect(sf::IntRect(0, 0, TILE_W, TILE_H));
+                else setTileImage(tile_id);
+                tile.setPosition((x0*TILE_W)/percent_x+(x-x0)*TILE_W+px, (y0*TILE_H)/percent_y+(y-y0)*TILE_H+py);
                 target.draw(tile);
             }
 }
