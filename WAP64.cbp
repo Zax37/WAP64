@@ -11,11 +11,12 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="RETAIL01.WWD" />
+				<Option parameters="RETAIL02.WWD" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
 				<Linker>
+					<Add option="-lsfgui-s-d" />
 					<Add option="-lsfml-graphics-s-d" />
 					<Add option="-lsfml-window-s-d" />
 					<Add option="-lsfml-system-s-d" />
@@ -36,6 +37,7 @@
 					<Add option="-g" />
 				</Compiler>
 				<Linker>
+					<Add option="-lsfgui-s" />
 					<Add option="-lsfml-graphics-s" />
 					<Add option="-lsfml-window-s" />
 					<Add option="-lsfml-system-s" />
@@ -51,13 +53,16 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 			<Add option="-DSFML_STATIC" />
+			<Add option="-DSFGUI_STATIC" />
 			<Add directory="../dist/libwap32/include" />
 			<Add directory="../dist/SFML/include" />
+			<Add directory="../dist/SFGUI/include" />
 		</Compiler>
 		<Linker>
 			<Add library="libwap32.dll" />
 			<Add directory="../dist/libwap32" />
 			<Add directory="../dist/SFML/lib" />
+			<Add directory="../dist/SFGUI/lib" />
 		</Linker>
 		<Unit filename="main.cpp" />
 		<Unit filename="res.cpp" />

@@ -53,7 +53,7 @@ wwd_map::wwd_map(string filename){
         planes.emplace_back(this, plane);
 
         if(wap_plane_get_properties(plane)->flags & WAP_PLANE_FLAG_MAIN_PLANE)
-            main_plane = &*planes.end();
+            main_plane = plane;
         //auto obj_c = wap_plane_get_object_count(plane);
         //cout << i << ": " << wap_plane_get_properties(plane)->name << "(" << wap_plane_get_image_set(plane, 0) << ")" << endl;
     }
@@ -72,19 +72,6 @@ wwd_map::~wwd_map(){
 }
 
 const char* wwd_map::getLevelName(){ return wap_wwd_get_properties(wwd)->level_name; }
-
-wwd_map_plane* wwd_map::getMainPlane(){
-    wwd_map_plane * main_plane = 0;
-
-    for(auto i=planes.begin(); i!=planes.end(); i++)
-    {
-        if(wap_plane_get_properties(i->plane)->flags & WAP_PLANE_FLAG_MAIN_PLANE)
-            main_plane = &*i;
-        //auto obj_c = wap_plane_get_object_count(plane);
-        //cout << i << ": " << wap_plane_get_properties(plane)->name << "(" << wap_plane_get_image_set(plane, 0) << ")" << endl;
-    }
-    return main_plane;
-}
 
 const char* wwd_map::getLevelDir()
 {
@@ -181,8 +168,8 @@ void wwd_map_plane::preRender()
         for(uint32_t x=0; x<plane_w; x++ )
             if(auto tile_id = getTile(x, y))
             {
-                if(tile_id == 4294967295) continue;
-                if(tile_id == 4008636142)
+                if(tile_id == TILE_EMPTY) continue;
+                if(tile_id == TILE_FILL)
                 {
                     sf::RectangleShape t_fill(sf::Vector2f(TILE_W, TILE_H));
                     t_fill.setPosition((x*TILE_W), (y*TILE_H));
@@ -200,13 +187,21 @@ void wwd_map_plane::preRender()
     texture = preRendTex.getTexture();
 }
 
-void wwd_map::draw(sf::RenderTarget& target, sf::IntRect rect)
+void wwd_map::draw(sf::RenderTarget* target, sf::IntRect rect)
 {
     for(auto p = planes.begin(); p!=planes.end(); p++)
+    {
         p->draw( target, rect);
+        if(p->plane == main_plane)
+        {
+            sf::RectangleShape kw(sf::Vector2f(64, 64));
+            kw.setPosition(rect.left+rect.width/2, rect.top+rect.height-64);
+            target->draw(kw);
+        }
+    }
 }
 
-void wwd_map_plane::draw(sf::RenderTarget& target, sf::IntRect rect )
+void wwd_map_plane::draw(sf::RenderTarget* target, sf::IntRect rect )
 {
 
     int32_t m_x = wap_plane_get_properties(plane)->movement_x_percent;
@@ -221,17 +216,14 @@ void wwd_map_plane::draw(sf::RenderTarget& target, sf::IntRect rect )
     if(preRendered)
     {
         sf::Sprite prPlane;
+        texture.setRepeated(true);
         prPlane.setTexture(texture);
-        int px = (rect.left+320)*percent_x, py = (rect.top+240)*percent_y;
-        prPlane.setOrigin(px%(plane_w*TILE_W)-320, py%(plane_h*TILE_H)-240);
-        prPlane.setPosition(rect.left, rect.top);
-        target.draw(prPlane);
-        prPlane.move(plane_w*TILE_W, 0);
-        target.draw(prPlane);
-        prPlane.move(0, plane_h*TILE_H);
-        target.draw(prPlane);
-        prPlane.move(-plane_w*TILE_W, 0);
-        target.draw(prPlane);
+        int hw = rect.width/2, hh = rect.height/2;
+        int px = (rect.left+hw)*percent_x, py = (rect.top+hh)*percent_y;
+        prPlane.setOrigin(-hw, -hh);
+        prPlane.setTextureRect(sf::IntRect(px%(plane_w*TILE_W)-hw, py%(plane_h*TILE_H)-hh, rect.width, rect.height));
+        prPlane.setPosition(rect.left-hw, rect.top-hh);
+        target->draw(prPlane);
         return;
     }
 
@@ -281,19 +273,19 @@ void wwd_map_plane::draw(sf::RenderTarget& target, sf::IntRect rect )
         for(int x=x0; x<=xmax; x++ )
             if(auto tile_id = getTile(x, y))
             {
-                if(tile_id == 4294967295) continue;
+                if(tile_id == TILE_EMPTY) continue;
                 tile.setPosition((x0*TILE_W)/percent_x+(x-x0)*TILE_W+px, (y0*TILE_H)/percent_y+(y-y0)*TILE_H+py);
-                if(tile_id == 4008636142)
+                if(tile_id == TILE_FILL)
                 {
                     tile.setTextureRect(sf::IntRect(0, 0, TILE_W, TILE_H));
                     //tile.setFillColor(fill_color);
-                    target.draw(tile);
+                    target->draw(tile);
                     //tile.setFillColor(sf::Color::White);
                 }
                 else
                 {
                     setTileImage(tile_id);
-                    target.draw(tile);
+                    target->draw(tile);
                 }
             }
 }

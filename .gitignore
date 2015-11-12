@@ -1,3 +1,5 @@
-DATA\*
-obj\*
+DATA/
+obj/
 *.wwd
+*.exe
+*.dll

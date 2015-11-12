@@ -4,6 +4,9 @@
 
 #include <dirent.h>
 
+#define TILE_EMPTY 4294967295
+#define TILE_FILL 4008636142
+
 class wwd_map_plane;
 class wwd_resource;
 
@@ -15,17 +18,17 @@ protected:
     wap_wwd* wwd;
     std::vector<wwd_map_plane> planes;
     std::map<std::string, wwd_resource> resources;
-    wwd_map_plane* main_plane;
+    wap_plane* main_plane;
 public:
     unsigned int spawn_x=0, spawn_y=0;
     wwd_map(std::string filename);
     ~wwd_map();
     const char* getLevelName();
     const char* getLevelDir();
-    wwd_map_plane* getMainPlane();
-    void draw( sf::RenderTarget& target, sf::IntRect rect );
+    void draw( sf::RenderTarget* target, sf::IntRect rect );
     wwd_resource* loadResource(const char* path, const char* as);
     wwd_resource* getResource(const char* name);
+    wap_plane* getMainPlane(){ return main_plane; }
 };
 
 class wwd_map_plane {
@@ -47,7 +50,7 @@ protected:
 public:
     unsigned short TILE_W, TILE_H;
     wwd_map_plane(wwd_map * wp, wap_plane* p);
-    void draw(sf::RenderTarget& target, sf::IntRect rect );
+    void draw(sf::RenderTarget* target, sf::IntRect rect );
     void preRender();
 };
 
