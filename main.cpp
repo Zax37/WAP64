@@ -19,6 +19,14 @@ int main(int argc, const char **argv)
         text.setStyle(sf::Text::Bold);
         text.setPosition(sf::Vector2f(level.spawn_x, level.spawn_y));
 
+        sf::Sprite claw;
+        wwd_resource * clawres = level.getResource("CLAW");
+        sf::Texture c_tex;
+        c_tex.loadFromImage(clawres->texture);
+        claw.setTexture(c_tex);
+        claw.setTextureRect(clawres->get(2));
+        claw.setPosition(level.spawn_x, level.spawn_y);
+
         sf::RenderWindow window(sf::VideoMode(640, 480), level.getLevelName());
         window.setVerticalSyncEnabled(true);
         window.setFramerateLimit(60);
@@ -26,6 +34,8 @@ int main(int argc, const char **argv)
 
         view.setCenter(sf::Vector2f(level.spawn_x, level.spawn_y));
         window.setView(view);
+
+        sf::Vector2u s = window.getSize();
 
         auto main_plane = level.getMainPlane();
 
@@ -42,6 +52,7 @@ int main(int argc, const char **argv)
                     // update the view to the new size of the window
                     view.setSize(event.size.width, event.size.height);
                     window.setView(sf::View(view));
+                    s = window.getSize();
 
                 }
 
@@ -64,8 +75,8 @@ int main(int argc, const char **argv)
             window.clear();
 
             sf::Vector2f c = view.getCenter();
-            sf::Vector2u s = window.getSize();
             level.draw( window, sf::IntRect( c.x-s.x/2, c.y-s.y/2, s.x, s.y ) );
+            window.draw(claw);
             window.draw(text);
             window.display();
         }
