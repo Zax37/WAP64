@@ -22,23 +22,16 @@ int main()
 	desktop.SetProperty("Label", "Color", sf::Color( 135, 135, 135 ));
 	desktop.SetProperty("Label.hover", "Color", sf::Color( 235, 235, 235 ));
 
-    sf::Image background;
-    assert(background.loadFromFile("DATA\\STATES\\MENU\\SCREENS\\MENU.JPG"));
-
-    auto bgd = sfg::Image::Create(background);
-    auto bgd_window = sfg::Window::Create();
-    bgd_window->Add(bgd);
-    bgd_window->SetStyle(0);
-    bgd_window->SetPosition(sf::Vector2f(-11, -22));
-
-    desktop.Add( bgd_window );
-
     auto sfg_window = sfg::Window::Create();
 	sfg_window->SetTitle( "Select level" );
 
 	auto box = sfg::Box::Create( sfg::Box::Orientation::VERTICAL, 5.0f );
 	sfg_window->Add( box );
 	desktop.Add( sfg_window );
+
+    sf::Texture bgd; assert(bgd.loadFromFile("DATA\\STATES\\MENU\\SCREENS\\MENU.JPG"));
+    sf::RectangleShape screen((sf::Vector2f)window.getSize());
+    screen.setTexture(&bgd);
 
     DIR * files = opendir("DATA\\..");
     struct dirent *d;
@@ -55,7 +48,7 @@ int main()
                     levels.emplace_back( sfg::Label::Create( n.c_str() ) );
                     shared_ptr<sfg::Label> label = levels.back();
                     box->Pack( label );
-                    levels.back()->GetSignal( sfg::Widget::OnLeftClick ).Connect( [&window, label](){ PlayLevel(&window, label->GetText().toAnsiString().c_str()); } );
+                    levels.back()->GetSignal( sfg::Widget::OnLeftClick ).Connect( [&window, label](){ PlayLevel(window, label->GetText().toAnsiString().c_str()); window.setView(window.getDefaultView()); } );
                     levels.back()->GetSignal( sfg::Widget::OnMouseEnter ).Connect( [label](){ label->SetClass("hover"); } );
                     levels.back()->GetSignal( sfg::Widget::OnMouseLeave ).Connect( [label](){ label->SetClass(" ");  } );
                 }
@@ -85,7 +78,7 @@ int main()
 
             desktop.Update( clock.restart().asSeconds() );
 
-            window.clear();
+            window.draw(screen);
 
             sfgui.Display( window );
             window.display();

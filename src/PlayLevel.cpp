@@ -3,7 +3,34 @@
 
 using namespace std;
 
-void PlayLevel(sf::RenderWindow* window, const char * l_name)
+void DrawLoadingScreen(sf::RenderWindow& target, sf::Texture* screen_tex, unsigned short progress)
+{
+    target.setView(target.getDefaultView());
+
+    sf::RectangleShape screen((sf::Vector2f)target.getSize());
+    screen.setTexture(screen_tex);
+
+    target.draw(screen);
+
+    sf::RectangleShape progressbar(sf::Vector2f(190, 15));
+    progressbar.setPosition(target.getSize().x/2-100, target.getSize().y-125);
+
+    if(progress<100)
+    {
+        progressbar.setFillColor(sf::Color::Black);
+        target.draw(progressbar);
+    }
+    if(progress>0)
+    {
+        progressbar.setSize(sf::Vector2f(progress*1.9, 15));
+        progressbar.setFillColor(sf::Color::Red);
+        target.draw(progressbar);
+    }
+
+    target.display();
+}
+
+void PlayLevel(sf::RenderWindow& window, const char * l_name)
 {
     wwd_map level(l_name);
 
@@ -11,18 +38,17 @@ void PlayLevel(sf::RenderWindow* window, const char * l_name)
     path += "\\SCREENS\\LOADING.JPG";
 
     sf::Texture bgd; bgd.loadFromFile(path.c_str());
-    sf::RectangleShape loading_s((sf::Vector2f)window->getSize());
-    loading_s.setTexture(&bgd);
-
-    window->draw(loading_s);
-    window->display();
+    DrawLoadingScreen(window, &bgd, 0);
 
     path = level.getLevelDir();
     path += "\\IMAGES\\";
     level.loadResource(path.c_str(), "LEVEL");
+    DrawLoadingScreen(window, &bgd, 20);
 
     level.loadResource("DATA\\CLAW\\IMAGES\\", "CLAW");
+    DrawLoadingScreen(window, &bgd, 30);
     level.loadResource("DATA\\GAME\\IMAGES\\", "GAME");
+    DrawLoadingScreen(window, &bgd, 50);
 
     sf::Font font;
     if (!font.loadFromFile("cambriab.ttf"))
@@ -44,29 +70,31 @@ void PlayLevel(sf::RenderWindow* window, const char * l_name)
     claw.setTextureRect(clawres->get(2));
     claw.setPosition(level.spawn_x, level.spawn_y);
 
-    sf::View view(sf::FloatRect(0, 0, window->getSize().x, window->getSize().y));
+    DrawLoadingScreen(window, &bgd, 100);
+
+    sf::View view(sf::FloatRect(0, 0, window.getSize().x, window.getSize().y));
 
     sf::Vector2f s = view.getCenter();
 
     view.setCenter(sf::Vector2f(level.spawn_x, level.spawn_y));
-    window->setView(view);
+    window.setView(view);
 
     sf::Vector2i touch_st_pos; sf::Vector2f touch_center;
     bool touch_moving = false; unsigned int touch_finger=0;
 
-    while (window->isOpen())
+    while (window.isOpen())
     {
         sf::Event event;
-        while (window->pollEvent(event))
+        while (window.pollEvent(event))
         {
             switch(event.type)
             {
                 case sf::Event::Closed:
-                    window->close();
+                    window.close();
                 break;
                 case sf::Event::Resized:
                     view.setSize(event.size.width, event.size.height);
-                    window->setView(sf::View(view));
+                    window.setView(sf::View(view));
                 break;
                 case sf::Event::TouchBegan:
                     if(!touch_moving)
@@ -95,7 +123,7 @@ void PlayLevel(sf::RenderWindow* window, const char * l_name)
 
         if(touch_moving && sf::Touch::isDown(touch_finger))
         {
-            sf::Vector2i touch_cur_pos = sf::Touch::getPosition(touch_finger, *window);
+            sf::Vector2i touch_cur_pos = sf::Touch::getPosition(touch_finger, window);
             view.setCenter(touch_center);
             sf::Vector2f diff = (sf::Vector2f)(touch_st_pos-touch_cur_pos);
             view.move(diff);
@@ -114,15 +142,15 @@ void PlayLevel(sf::RenderWindow* window, const char * l_name)
         else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
             view.move(0,step);
 
-        window->setView(view);
+        window.setView(view);
 
-        window->clear();
+        window.clear();
 
         sf::Vector2f c = view.getCenter();
         level.draw( window, sf::IntRect( c.x-s.x, c.y-s.y, s.x*2, s.y*2 ) );
-        window->draw(claw);
-        window->draw(text);
-        window->display();
+        window.draw(claw);
+        window.draw(text);
+        window.display();
     }
 
 return;

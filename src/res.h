@@ -26,7 +26,7 @@ public:
     ~wwd_map();
     const char* getLevelName();
     const char* getLevelDir();
-    void draw( sf::RenderTarget* target, sf::IntRect rect );
+    void draw( sf::RenderTarget& target, sf::IntRect rect );
     wwd_resource* loadResource(const char* path, const char* as);
     wwd_resource* getResource(const char* name);
     wap_plane* getMainPlane(){ return main_plane; }
@@ -51,7 +51,7 @@ protected:
 public:
     unsigned short TILE_W, TILE_H;
     wwd_map_plane(wwd_map * wp, wap_plane* p);
-    void draw(sf::RenderTarget* target, sf::IntRect rect );
+    void draw(sf::RenderTarget& target, sf::IntRect rect );
     void preRender();
 };
 

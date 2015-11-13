@@ -1,7 +1,2 @@
-DATA/
-obj/
-*.wwd
-*.exe
-*.dll
-*.depend
-*.layout
+WAP64.*
+.vs/

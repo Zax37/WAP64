@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 project(libwap32)
 
-set( WAP_BUILD_STATIC true CACHE BOOL "Static build." )
-
 include_directories("include")
 file(GLOB SOURCES
     "include/wap32.h"

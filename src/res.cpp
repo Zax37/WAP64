@@ -6,7 +6,6 @@
 
 using namespace std;
 
-
 wwd_map::wwd_map(string filename){
     wwd = wap_wwd_create();
 
@@ -184,7 +183,7 @@ void wwd_map_plane::preRender()
     texture = preRendTex.getTexture();
 }
 
-void wwd_map::draw(sf::RenderTarget* target, sf::IntRect rect)
+void wwd_map::draw(sf::RenderTarget& target, sf::IntRect rect)
 {
     for(auto p = planes.begin(); p!=planes.end(); p++)
     {
@@ -193,12 +192,12 @@ void wwd_map::draw(sf::RenderTarget* target, sf::IntRect rect)
         {
             sf::RectangleShape kw(sf::Vector2f(64, 64));
             kw.setPosition(rect.left+rect.width/2, rect.top+rect.height-64);
-            target->draw(kw);
+            target.draw(kw);
         }
     }
 }
 
-void wwd_map_plane::draw(sf::RenderTarget* target, sf::IntRect rect )
+void wwd_map_plane::draw(sf::RenderTarget& target, sf::IntRect rect )
 {
 
     int32_t m_x = wap_plane_get_properties(plane)->movement_x_percent;
@@ -220,7 +219,7 @@ void wwd_map_plane::draw(sf::RenderTarget* target, sf::IntRect rect )
         prPlane.setOrigin(-hw, -hh);
         prPlane.setTextureRect(sf::IntRect(px%(plane_w*TILE_W)-hw, py%(plane_h*TILE_H)-hh, rect.width, rect.height));
         prPlane.setPosition(rect.left-hw, rect.top-hh);
-        target->draw(prPlane);
+        target.draw(prPlane);
         return;
     }
 
@@ -276,13 +275,13 @@ void wwd_map_plane::draw(sf::RenderTarget* target, sf::IntRect rect )
                 {
                     tile_sprite.setTextureRect(sf::IntRect(0, 0, TILE_W, TILE_H));
                     //tile.setFillColor(fill_color);
-                    target->draw(tile_sprite);
+                    target.draw(tile_sprite);
                     //tile.setFillColor(sf::Color::White);
                 }
                 else
                 {
                     setTileImage(tile_id);
-                    target->draw(tile_sprite);
+                    target.draw(tile_sprite);
                 }
             }
 }
