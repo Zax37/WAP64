@@ -64,6 +64,8 @@
 			<Add directory="../dist/SFML/lib" />
 			<Add directory="../dist/SFGUI/lib" />
 		</Linker>
+		<Unit filename="common.cpp" />
+		<Unit filename="common.h" />
 		<Unit filename="main.cpp" />
 		<Unit filename="res.cpp" />
 		<Unit filename="res.h" />

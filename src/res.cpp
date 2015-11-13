@@ -1,18 +1,11 @@
 #include "res.h"
 #include <assert.h>
-#include <string.h>
 #include <fstream>
+
+#include "common.h"
 
 using namespace std;
 
-unsigned getFirstNumber(const char* s)
-{
-    string str = s;
-
-    for(string::iterator c = str.begin(); c!=str.end(); c++)
-        if(*c >= '0' && *c <= '9') { return atoi(&*c); }
-    return 0;
-}
 
 wwd_map::wwd_map(string filename){
     wwd = wap_wwd_create();
@@ -37,13 +30,6 @@ wwd_map::wwd_map(string filename){
         palette[i] = sf::Color(c[0], c[1], c[2], 255);
     }
 
-    //path = getLevelDir();
-    //path += "\\IMAGES\\";
-    //loadResource(path.c_str(), "LEVEL");
-
-    loadResource("DATA\\CLAW\\IMAGES\\", "CLAW");
-    //loadResource("DATA\\GAME\\IMAGES\\", "GAME");
-
     spawn_x = map_properties->start_x;
     spawn_y = map_properties->start_y;
 
@@ -60,11 +46,22 @@ wwd_map::wwd_map(string filename){
     for(auto it = planes.begin(); it!=planes.end(); it++ )
     {
         it->texture.loadFromImage(it->tileset->texture);
-        it->tile.setTexture(it->texture);
+        it->tile_sprite.setTexture(it->texture);
         if(it->plane_w*it->plane_h<4000)
             it->preRender();
+        else{
+            for(uint32_t y = 0; y < it->plane_h; y++)
+                for(uint32_t x = 0; x < it->plane_w; x++)
+                    it->tiles.emplace_back(wap_plane_get_tile(it->plane, x, y), it->wwd_map_ptr);
+        }
     }
 
+}
+
+wwd_map_tile::wwd_map_tile(uint32_t v, wwd_map* ptr)
+{
+    value = v;
+    properties = wap_wwd_get_tile_description(ptr->wwd, v);
 }
 
 wwd_map::~wwd_map(){
@@ -113,7 +110,7 @@ wwd_resource* wwd_map::loadResource(const char* p, const char* as)
 }
 
 void wwd_map_plane::setTileImage(unsigned short id){
-    tile.setTextureRect((*tileset)[id]);
+    tile_sprite.setTextureRect((*tileset)[id]);
 }
 
 uint32_t wwd_map_plane::getTile(uint32_t x, uint32_t y)
@@ -178,9 +175,9 @@ void wwd_map_plane::preRender()
                 }
                 else
                 {
-                    tile.setPosition((x*TILE_W), (y*TILE_H));
+                    tile_sprite.setPosition((x*TILE_W), (y*TILE_H));
                     setTileImage(tile_id);
-                    preRendTex.draw(tile);
+                    preRendTex.draw(tile_sprite);
                 }
             }
     preRendTex.display();
@@ -274,18 +271,18 @@ void wwd_map_plane::draw(sf::RenderTarget* target, sf::IntRect rect )
             if(auto tile_id = getTile(x, y))
             {
                 if(tile_id == TILE_EMPTY) continue;
-                tile.setPosition((x0*TILE_W)/percent_x+(x-x0)*TILE_W+px, (y0*TILE_H)/percent_y+(y-y0)*TILE_H+py);
+                tile_sprite.setPosition((x0*TILE_W)/percent_x+(x-x0)*TILE_W+px, (y0*TILE_H)/percent_y+(y-y0)*TILE_H+py);
                 if(tile_id == TILE_FILL)
                 {
-                    tile.setTextureRect(sf::IntRect(0, 0, TILE_W, TILE_H));
+                    tile_sprite.setTextureRect(sf::IntRect(0, 0, TILE_W, TILE_H));
                     //tile.setFillColor(fill_color);
-                    target->draw(tile);
+                    target->draw(tile_sprite);
                     //tile.setFillColor(sf::Color::White);
                 }
                 else
                 {
                     setTileImage(tile_id);
-                    target->draw(tile);
+                    target->draw(tile_sprite);
                 }
             }
 }

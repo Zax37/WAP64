@@ -1,0 +1,2 @@
+D:/Projects/WAP64/libwap32/CMakeFiles/wap32.dir
+D:/Projects/WAP64/CMakeFiles/WAP64.dir
