@@ -1,7 +1,6 @@
 DATA/
 obj/
 *.wwd
-build/
 *.exe
 *.dll
 *.depend
