@@ -5,6 +5,15 @@
 
 using namespace std;
 
+unsigned getFirstNumber(const char* s)
+{
+    string str = s;
+
+    for(string::iterator c = str.begin(); c!=str.end(); c++)
+        if(*c >= '0' && *c <= '9') { return atoi(&*c); }
+    return 0;
+}
+
 wwd_map::wwd_map(string filename){
     wwd = wap_wwd_create();
 
@@ -13,26 +22,47 @@ wwd_map::wwd_map(string filename){
 
     auto map_properties = wap_wwd_get_properties(wwd);
 
-    string level_name = map_properties->level_name;
-
-    for(string::iterator c = level_name.begin(); c!=level_name.end(); c++)
-        if(*c >= '0' && *c <= '9') { base_level = atoi(&*c); break; }
+    base_level = getFirstNumber(map_properties->level_name);
 
     assert(base_level);
+
+    string path = getLevelDir();
+    path += "\\PALETTES\\MAIN.PAL";
+    ifstream pal;
+    pal.open(path.c_str(),ios::binary|ios::in);
+    char c[3];
+    for(int i=0; i<256; i++)
+    {
+        pal.read(c, 3);
+        palette[i] = sf::Color(c[0], c[1], c[2], 255);
+    }
+
+    //path = getLevelDir();
+    //path += "\\IMAGES\\";
+    //loadResource(path.c_str(), "LEVEL");
+
+    loadResource("DATA\\CLAW\\IMAGES\\", "CLAW");
+    //loadResource("DATA\\GAME\\IMAGES\\", "GAME");
 
     spawn_x = map_properties->start_x;
     spawn_y = map_properties->start_y;
 
-    for(int i=0; i<wap_wwd_get_plane_count(wwd); i++)
+    for(uint32_t i=0; i<wap_wwd_get_plane_count(wwd); i++)
     {
-        wwd_map_plane plane(this, wap_wwd_get_plane(wwd, i));
+        auto plane = wap_wwd_get_plane(wwd, i);
+        planes.emplace_back(this, plane);
 
-        if(wap_plane_get_properties(plane.plane)->flags & WAP_PLANE_FLAG_MAIN_PLANE)
-            main_plane = &*planes.end();
-
-        planes.push_back(plane);
+        if(wap_plane_get_properties(plane)->flags & WAP_PLANE_FLAG_MAIN_PLANE)
+            main_plane = plane;
         //auto obj_c = wap_plane_get_object_count(plane);
         //cout << i << ": " << wap_plane_get_properties(plane)->name << "(" << wap_plane_get_image_set(plane, 0) << ")" << endl;
+    }
+    for(auto it = planes.begin(); it!=planes.end(); it++ )
+    {
+        it->texture.loadFromImage(it->tileset->texture);
+        it->tile.setTexture(it->texture);
+        if(it->plane_w*it->plane_h<4000)
+            it->preRender();
     }
 
 }
@@ -43,19 +73,6 @@ wwd_map::~wwd_map(){
 
 const char* wwd_map::getLevelName(){ return wap_wwd_get_properties(wwd)->level_name; }
 
-wwd_map_plane* wwd_map::getMainPlane(){
-    wwd_map_plane * main_plane = 0;
-
-    for(auto i=planes.begin(); i!=planes.end(); i++)
-    {
-        if(wap_plane_get_properties(i->plane)->flags & WAP_PLANE_FLAG_MAIN_PLANE)
-            main_plane = &*i;
-        //auto obj_c = wap_plane_get_object_count(plane);
-        //cout << i << ": " << wap_plane_get_properties(plane)->name << "(" << wap_plane_get_image_set(plane, 0) << ")" << endl;
-    }
-    return main_plane;
-}
-
 const char* wwd_map::getLevelDir()
 {
     string path = "DATA\\LEVEL";
@@ -63,57 +80,40 @@ const char* wwd_map::getLevelDir()
     return path.c_str();
 }
 
-void wwd_map_plane::loadTileset(const char* tileset)
+wwd_resource* wwd_map::loadResource(const char* p, const char* as)
 {
-    string path = wwd_map_ptr->getLevelDir();
-    path += "\\TILES\\";
-    path += tileset;
-    path += '\\';
+    string path = p;
 
-    DIR * assets = opendir(path.c_str());
+    DIR * assets = opendir(p);
     struct dirent *d;
     if(assets)
     {
         while((d = readdir(assets)) != NULL)
             if (strcmp(d->d_name, ".") && strcmp(d->d_name, ".."))
             {
-                unsigned short id = atoi(d->d_name);
-                if(id)
+                DIR * dir = opendir((path+d->d_name).c_str());
+                if (dir != NULL)
                 {
-                    /*std::map<unsigned short, unsigned short>::iterator it = imageset.find(id);
-                    if (it != imageset.end())
-                    {
-                        cerr << "Error loading tile " << d->d_name << "." << endl;
-                        continue;
-                    }*/
-                    sf::Image img = texture.copyToImage();
-                    sf::Image nimg;
-                    unsigned int width = img.getSize().x;
-                    nimg.create(width+TILE_W, TILE_H);
-                    nimg.copy(img, 0, 0);
-                    assert(img.loadFromFile(path+d->d_name));
-                    nimg.copy(img, width, 0);
-                    texture.loadFromImage(nimg);
-                    imageset[id] = width/TILE_W;
-                    //cout << id << ": " << width/TILE_W << endl;
+                   closedir(dir);
+                   string npath = path+d->d_name+'\\';
+                   string nas = as;
+                   nas += '_';
+                   nas += d->d_name;
+                   loadResource(npath.c_str(), nas.c_str());
+                   continue;
                 }
-                else cerr << "Error loading tile " << d->d_name << "." << endl;
+
+                unsigned short id = getFirstNumber(d->d_name);
+                sf::Image img;
+                assert(img.loadFromFile(path+d->d_name));
+                resources[as].set(id, img);
             }
     }
-
+    return &resources[as];
 }
 
 void wwd_map_plane::setTileImage(unsigned short id){
-    std::map<unsigned short, unsigned short>::iterator it = imageset.find(id);
-    if (it != imageset.end())
-    {
-        tile.setTextureRect(sf::IntRect( (*it).second*TILE_W, 0, TILE_W, TILE_H ));
-    }
-    else
-    {
-        cerr << "tile " << id << " not found" << endl;
-        tile.setTextureRect(sf::IntRect(0, 0, TILE_W, TILE_H) );
-    }
+    tile.setTextureRect((*tileset)[id]);
 }
 
 uint32_t wwd_map_plane::getTile(uint32_t x, uint32_t y)
@@ -136,43 +136,74 @@ uint32_t wwd_map_plane::getTile(uint32_t x, uint32_t y)
     return wap_plane_get_tile(plane, x, y);
 }
 
-void wwd_map_plane::loadPalette()
-{
-    string path = wwd_map_ptr->getLevelDir();
-    path += "\\PALETTES\\MAIN.PAL";
-    ifstream pal;
-    pal.open(path.c_str(),ios::binary|ios::in);
-    char c[3];
-    for(int i=0; i<256; i++)
-    {
-        pal.read(c, 3);
-        palette[i] = sf::Color(c[0], c[1], c[2], 255);
-    }
-}
-
 wwd_map_plane::wwd_map_plane(wwd_map * wp, wap_plane* p)
 {
     wwd_map_ptr = wp;
     plane = p;
-    loadPalette();
     TILE_W = wap_plane_get_properties(plane)->tile_width;
     TILE_H = wap_plane_get_properties(plane)->tile_height;
-    tile.setSize(sf::Vector2f(TILE_W, TILE_H));
-    sf::Image img;
-    img.create(TILE_W, TILE_H, palette[wap_plane_get_properties(plane)->fill_color]);
-    texture.loadFromImage(img);
-    loadTileset(wap_plane_get_image_set(plane, 0));
-    cout << wap_plane_get_image_set(plane, 0) << " " << wap_plane_get_properties(plane)->movement_x_percent << "x" << wap_plane_get_properties(plane)->movement_y_percent << endl;
+    //tile.setSize(sf::Vector2f(TILE_W, TILE_H));
+    fill_color = wwd_map_ptr->palette[wap_plane_get_properties(plane)->fill_color];
+
+    const char * imgset = wap_plane_get_image_set(plane, 0);
+    tileset = wwd_map_ptr->getResource(imgset);
+    if(!tileset)
+    {
+        //cerr << "not loaded" << endl;
+        string path = wwd_map_ptr->getLevelDir();
+        path += "\\TILES\\";
+        path += imgset;
+        path += '\\';
+        tileset = wwd_map_ptr->loadResource( path.c_str(), imgset );
+    }
+    wap_plane_get_map_dimensions(plane,&plane_w,&plane_h);
 }
 
-void wwd_map::draw(sf::RenderTarget& target, sf::IntRect rect)
+void wwd_map_plane::preRender()
+{
+    preRendered = true;
+    sf::RenderTexture preRendTex;
+    preRendTex.create(plane_w*TILE_W, plane_h*TILE_H);
+    for(uint32_t y=0; y<plane_h; y++ )
+        for(uint32_t x=0; x<plane_w; x++ )
+            if(auto tile_id = getTile(x, y))
+            {
+                if(tile_id == TILE_EMPTY) continue;
+                if(tile_id == TILE_FILL)
+                {
+                    sf::RectangleShape t_fill(sf::Vector2f(TILE_W, TILE_H));
+                    t_fill.setPosition((x*TILE_W), (y*TILE_H));
+                    t_fill.setFillColor(fill_color);
+                    preRendTex.draw(t_fill);
+                }
+                else
+                {
+                    tile.setPosition((x*TILE_W), (y*TILE_H));
+                    setTileImage(tile_id);
+                    preRendTex.draw(tile);
+                }
+            }
+    preRendTex.display();
+    texture = preRendTex.getTexture();
+}
+
+void wwd_map::draw(sf::RenderTarget* target, sf::IntRect rect)
 {
     for(auto p = planes.begin(); p!=planes.end(); p++)
+    {
         p->draw( target, rect);
+        if(p->plane == main_plane)
+        {
+            sf::RectangleShape kw(sf::Vector2f(64, 64));
+            kw.setPosition(rect.left+rect.width/2, rect.top+rect.height-64);
+            target->draw(kw);
+        }
+    }
 }
 
-void wwd_map_plane::draw(sf::RenderTarget& target, sf::IntRect rect )
+void wwd_map_plane::draw(sf::RenderTarget* target, sf::IntRect rect )
 {
+
     int32_t m_x = wap_plane_get_properties(plane)->movement_x_percent;
     int32_t m_y = wap_plane_get_properties(plane)->movement_y_percent;
 
@@ -182,10 +213,24 @@ void wwd_map_plane::draw(sf::RenderTarget& target, sf::IntRect rect )
     float percent_x = m_x * 0.01;
     float percent_y = m_y * 0.01;
 
+    if(preRendered)
+    {
+        sf::Sprite prPlane;
+        texture.setRepeated(true);
+        prPlane.setTexture(texture);
+        int hw = rect.width/2, hh = rect.height/2;
+        int px = (rect.left+hw)*percent_x, py = (rect.top+hh)*percent_y;
+        prPlane.setOrigin(-hw, -hh);
+        prPlane.setTextureRect(sf::IntRect(px%(plane_w*TILE_W)-hw, py%(plane_h*TILE_H)-hh, rect.width, rect.height));
+        prPlane.setPosition(rect.left-hw, rect.top-hh);
+        target->draw(prPlane);
+        return;
+    }
+
     rect.left *= percent_x;
     rect.top *= percent_y;
 
-    tile.setTexture(&texture);
+    //tile.setTexture(&texture);
 
     int x0 = rect.left/TILE_W;
     int y0 = rect.top/TILE_H;
@@ -228,11 +273,51 @@ void wwd_map_plane::draw(sf::RenderTarget& target, sf::IntRect rect )
         for(int x=x0; x<=xmax; x++ )
             if(auto tile_id = getTile(x, y))
             {
-                if(tile_id == 4294967295) continue;
-                if(tile_id == 4008636142)
-                    tile.setTextureRect(sf::IntRect(0, 0, TILE_W, TILE_H));
-                else setTileImage(tile_id);
+                if(tile_id == TILE_EMPTY) continue;
                 tile.setPosition((x0*TILE_W)/percent_x+(x-x0)*TILE_W+px, (y0*TILE_H)/percent_y+(y-y0)*TILE_H+py);
-                target.draw(tile);
+                if(tile_id == TILE_FILL)
+                {
+                    tile.setTextureRect(sf::IntRect(0, 0, TILE_W, TILE_H));
+                    //tile.setFillColor(fill_color);
+                    target->draw(tile);
+                    //tile.setFillColor(sf::Color::White);
+                }
+                else
+                {
+                    setTileImage(tile_id);
+                    target->draw(tile);
+                }
             }
+}
+
+sf::IntRect wwd_resource::operator[](unsigned short id)
+{
+    return imageset[id];
+}
+
+sf::IntRect wwd_resource::get(unsigned short id)
+{
+    return imageset[id];
+}
+
+void wwd_resource::set(unsigned short id, sf::Image &img)
+{
+    sf::IntRect place = imageset[id];
+    if(!place.width)
+    {
+        place = sf::IntRect( texture.getSize().x, 0, img.getSize().x, img.getSize().y );
+        sf::Image cp = texture;
+        texture.create(texture.getSize().x+img.getSize().x, max(texture.getSize().y,img.getSize().y), sf::Color::Transparent );
+        texture.copy(cp, 0, 0);
+        imageset[id] = place;
+    }
+    texture.copy(img, place.left, place.top);
+}
+
+wwd_resource* wwd_map::getResource(const char* name)
+{
+    auto it = resources.find(name);
+    if (it != resources.end())
+        return &it->second;
+    return 0;
 }
