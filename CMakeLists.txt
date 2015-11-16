@@ -11,8 +11,10 @@ set(SOURCES
     src/res.cpp
 	src/common.h
 	src/common.cpp
-	src/PlayLevel.h
-	src/PlayLevel.cpp
+	src/cMachine.h
+	src/cMachine.cpp
+	src/cMenu.cpp
+	src/cPlayLevel.cpp
 )
 
 #set( SFGUI_STATIC_LIBRARIES true CACHE BOOL "Do you want to link SFGUI statically?" )

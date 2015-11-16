@@ -190,6 +190,9 @@ WAP_API int wap_wwd_read(wap_wwd *wwd, const char *wwd_buffer, size_t wwd_buffer
 /* Possible errors: WAP_ERROR, WAP_ENOMEMORY, WAP_EFILE, WAP_EINVALIDDATA */
 WAP_API int wap_wwd_open(wap_wwd *wwd, const char *file_path);
 
+/* Possible errors: WAP_ERROR, WAP_ENOMEMORY, WAP_EFILE, WAP_EINVALIDDATA */
+WAP_API int wap_wwd_getheader(wap_wwd_properties &wwdp, const char* file_path);
+
 /* Possible errors: WAP_ERROR, WAP_ENOMEMORY, */
 WAP_API int wap_wwd_write(const wap_wwd *wwd, wap_buffer *out_wwd_buffer);
 

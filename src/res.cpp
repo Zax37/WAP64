@@ -1,22 +1,25 @@
 #include "res.h"
-#include <assert.h>
 #include <fstream>
-
+#include <assert.h>
+#include <dirent.h>
 #include "common.h"
 
 using namespace std;
 
-wwd_map::wwd_map(string filename){
+wwd_map::wwd_map(){
     wwd = wap_wwd_create();
+}
 
-    assert(!wap_wwd_open(wwd, filename.c_str()));
+bool wwd_map::load(const char* filename){
+
+    if(wap_wwd_open(wwd, filename)) return false;
     //assert(wap_wwd_get_properties(wwd)->flags & WAP_WWD_FLAG_COMPRESS);
 
     auto map_properties = wap_wwd_get_properties(wwd);
 
     base_level = getFirstNumber(map_properties->level_name);
 
-    assert(base_level);
+    if(!base_level) return false;
 
     string path = getLevelDir();
     path += "\\PALETTES\\MAIN.PAL";
@@ -114,8 +117,6 @@ void wwd_map_plane::setTileImage(unsigned short id){
 
 uint32_t wwd_map_plane::getTile(uint32_t x, uint32_t y)
 {
-    uint32_t plane_w, plane_h;
-    wap_plane_get_map_dimensions(plane, &plane_w, &plane_h);
     if(x>=plane_w)
     {
         if(wap_plane_get_properties(plane)->flags & WAP_PLANE_FLAG_X_WRAPPING)
@@ -180,24 +181,19 @@ void wwd_map_plane::preRender()
                 }
             }
     preRendTex.display();
-    texture = preRendTex.getTexture();
+    cached_tex = preRendTex.getTexture();
+    cached_tex.setRepeated(true);
 }
 
 void wwd_map::draw(sf::RenderTarget& target, sf::IntRect rect)
 {
     for(auto p = planes.begin(); p!=planes.end(); p++)
     {
-        p->draw( target, rect);
-        if(p->plane == main_plane)
-        {
-            sf::RectangleShape kw(sf::Vector2f(64, 64));
-            kw.setPosition(rect.left+rect.width/2, rect.top+rect.height-64);
-            target.draw(kw);
-        }
+        p->draw( target, rect, p->plane == main_plane);
     }
 }
 
-void wwd_map_plane::draw(sf::RenderTarget& target, sf::IntRect rect )
+void wwd_map_plane::draw(sf::RenderTarget& target, sf::IntRect rect, bool rects )
 {
 
     int32_t m_x = wap_plane_get_properties(plane)->movement_x_percent;
@@ -212,8 +208,7 @@ void wwd_map_plane::draw(sf::RenderTarget& target, sf::IntRect rect )
     if(preRendered)
     {
         sf::Sprite prPlane;
-        texture.setRepeated(true);
-        prPlane.setTexture(texture);
+        prPlane.setTexture(cached_tex);
         int hw = rect.width/2, hh = rect.height/2;
         int px = (rect.left+hw)*percent_x, py = (rect.top+hh)*percent_y;
         prPlane.setOrigin(-hw, -hh);
@@ -226,16 +221,17 @@ void wwd_map_plane::draw(sf::RenderTarget& target, sf::IntRect rect )
     rect.left *= percent_x;
     rect.top *= percent_y;
 
-    //tile.setTexture(&texture);
-
     int x0 = rect.left/TILE_W;
     int y0 = rect.top/TILE_H;
     int xmax = (rect.left+rect.width)/TILE_W+1/percent_x;
     int ymax = (rect.top+rect.height)/TILE_H+1/percent_y;
 
+    //int nx = (rect.width)/TILE_W;
+    //int ny = (rect.height)/TILE_H;
+
     int px=0, py=0;
 
-    if(m_x<100)
+    /*if(m_x<100)
     {
         if(m_x==75)
             px = (rect.left%TILE_W)/3;
@@ -262,8 +258,7 @@ void wwd_map_plane::draw(sf::RenderTarget& target, sf::IntRect rect )
             py = -(rect.top%TILE_H)/5;
         else
             py = -(rect.top%TILE_H)/3;
-    }
-
+    }*/
 
     for(int y=y0; y<=ymax; y++ )
         for(int x=x0; x<=xmax; x++ )
@@ -283,7 +278,91 @@ void wwd_map_plane::draw(sf::RenderTarget& target, sf::IntRect rect )
                     setTileImage(tile_id);
                     target.draw(tile_sprite);
                 }
+                wap_tile_description * desc = wap_wwd_get_tile_description(wwd_map_ptr->wwd, tile_id);
+                if(desc->type==WAP_TILE_TYPE_SINGLE)
+                {
+                    if(auto type = desc->inside_attrib)
+                    {
+                        sf::RectangleShape inside(sf::Vector2f(desc->width, desc->height));
+                        switch(type)
+                        {
+                            case 1: inside.setFillColor(sf::Color(0, 0, 255, 125)); break;
+                            case 2: inside.setFillColor(sf::Color(0, 255, 0, 125)); break;
+                            case 3: inside.setFillColor(sf::Color(255, 242, 0, 125)); break;
+                            case 4: inside.setFillColor(sf::Color(255, 0, 0, 125)); break;
+                        }
+                        inside.setPosition(tile_sprite.getPosition());
+                        target.draw(inside);
+                    }
+                }
+                else if(desc->type==WAP_TILE_TYPE_DOUBLE)
+                {
+                    auto r = desc->rect;
+                    r.right += 1;
+                    r.bottom += 1;
+                    if(auto type = desc->inside_attrib)
+                    {
+                        sf::RectangleShape inside(sf::Vector2f(r.right-r.left, r.bottom-r.top));
+                        switch(type)
+                        {
+                            case 1: inside.setFillColor(sf::Color(0, 0, 255, 125)); break;
+                            case 2: inside.setFillColor(sf::Color(0, 255, 0, 125)); break;
+                            case 3: inside.setFillColor(sf::Color(255, 242, 0, 125)); break;
+                            case 4: inside.setFillColor(sf::Color(255, 0, 0, 125)); break;
+                        }
+                        inside.setPosition(tile_sprite.getPosition().x+r.left, tile_sprite.getPosition().y+r.top);
+                        target.draw(inside);
+                    }
+                    if(auto type = desc->outside_attrib)
+                    {
+                        sf::RectangleShape outside(sf::Vector2f(r.left, desc->height));
+                        switch(type)
+                        {
+                            case 1: outside.setFillColor(sf::Color(0, 0, 255, 125)); break;
+                            case 2: outside.setFillColor(sf::Color(0, 255, 0, 125)); break;
+                            case 3: outside.setFillColor(sf::Color(255, 242, 0, 125)); break;
+                            case 4: outside.setFillColor(sf::Color(255, 0, 0, 125)); break;
+                        }
+                        outside.setPosition(tile_sprite.getPosition());
+                        target.draw(outside);
+                        outside.setSize(sf::Vector2f(desc->width-r.left, r.top));
+                        outside.setPosition(tile_sprite.getPosition().x+r.left, tile_sprite.getPosition().y);
+                        target.draw(outside);
+                        outside.setSize(sf::Vector2f(desc->width-r.left, desc->height-r.bottom));
+                        outside.setPosition(tile_sprite.getPosition().x+r.left, tile_sprite.getPosition().y+r.bottom);
+                        target.draw(outside);
+                        outside.setSize(sf::Vector2f(desc->width-r.right, r.bottom-r.top));
+                        outside.setPosition(tile_sprite.getPosition().x+r.right, tile_sprite.getPosition().y+r.top);
+                        target.draw(outside);
+                    }
+                }
+
             }
+
+    /*vector<wwd_map_tile>::iterator it = tiles.begin()+y0*plane_w+x0;
+    for(int y=0; y<ny; y++ )
+    {
+        for(int x=0; x<nx; x++ )
+        {
+            auto tile_id = it->value;
+            if(tile_id == TILE_EMPTY) continue;
+            tile_sprite.setPosition((x0*TILE_W)/percent_x+x*TILE_W, (y0*TILE_H)/percent_y+y*TILE_H);
+            if(tile_id == TILE_FILL)
+            {
+                tile_sprite.setTextureRect(sf::IntRect(0, 0, TILE_W, TILE_H));
+                //tile.setFillColor(fill_color);
+                target.draw(tile_sprite);
+                //tile.setFillColor(sf::Color::White);
+            }
+            else
+            {
+                setTileImage(tile_id);
+                target.draw(tile_sprite);
+            }
+            it++;
+        }
+        it += plane_w - nx;
+    }*/
 }
 
 sf::IntRect wwd_resource::operator[](unsigned short id)

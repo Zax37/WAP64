@@ -1,11 +1,8 @@
-#include <wap32.h>
-#include <iostream>
-#include <SFML/Graphics.hpp>
-
-#include <dirent.h>
-
 #define TILE_EMPTY 4294967295
 #define TILE_FILL 4008636142
+
+#include <SFML/Graphics.hpp>
+#include <wap32.h>
 
 class wwd_map_plane;
 class wwd_resource;
@@ -19,10 +16,11 @@ protected:
     wap_wwd* wwd;
     std::vector<wwd_map_plane> planes;
     std::map<std::string, wwd_resource> resources;
-    wap_plane* main_plane;
+    class wap_plane* main_plane;
 public:
     unsigned int spawn_x=0, spawn_y=0;
-    wwd_map(std::string filename);
+    wwd_map();
+    bool load(const char* filename);
     ~wwd_map();
     const char* getLevelName();
     const char* getLevelDir();
@@ -42,7 +40,7 @@ protected:
     sf::Color fill_color;
     sf::Texture texture;
     bool preRendered = false;
-    //sf::RenderTexture preRendTex;
+    sf::Texture cached_tex;
     uint32_t plane_w, plane_h;
     std::vector<class wwd_map_tile> tiles;
 
@@ -51,15 +49,16 @@ protected:
 public:
     unsigned short TILE_W, TILE_H;
     wwd_map_plane(wwd_map * wp, wap_plane* p);
-    void draw(sf::RenderTarget& target, sf::IntRect rect );
+    void draw(sf::RenderTarget& target, sf::IntRect rect, bool rects );
     void preRender();
 };
 
 class wwd_map_tile
 {
+friend class wwd_map_plane;
     uint32_t value;
     wap_tile_description* properties;
-    std::vector<wap_object*> objects;
+    std::vector<class wap_object*> objects;
 public:
     wwd_map_tile(uint32_t v, wwd_map* ptr);
 };
